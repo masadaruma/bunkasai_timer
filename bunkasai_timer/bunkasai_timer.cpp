@@ -18,7 +18,7 @@ using namespace cv;
 //#define FRAME_HEIGHT 1080
 #define CAN_CANT_X 0		//入室可不可の座標
 #define CAN_CANT_Y 100
-#define MAX_NINN 10
+#define DEFAULT_MAX_NINN 25
 
 Mat people(int people_val, Mat img);
 Mat ninzu;
@@ -26,15 +26,16 @@ Mat time_output(Mat img);
 Mat enter(Mat img);
 Mat PinP_tr(const cv::Mat& srcImg, const cv::Mat& smallImg, const int tx, const int ty);
 Mat Overview(Mat img);
-void button_input();
+int button_input();
 bool out_flag = false, time_flag;
-int button_flag,ninn_num=0;//0が何も押されていない,1が増やす,2が減らす
+int button_flag,ninn_num=0;//0が何も押されていない,1が増やす,2が減らす:現在の人数
 int old_sec;
 struct tm tm;
 Mat cant = imread("cant_enter.jpg"), can = imread("can_enter.jpg");
 Mat ninn = imread("ninn.jpg");
 Mat genzai = imread("ninzu.jpg");
 Mat control(Size(640, 480), CV_8UC3, Scalar(0, 0, 0));
+int MAX_NINN = 25;
 
 int main() {
 	int people_val;
@@ -44,7 +45,7 @@ int main() {
 	cvui::init("control");
 	while (1) {
 		Mat img(Size(FRAME_WIDTH, FRAME_HEIGHT), CV_8UC3, Scalar(255, 255, 255));//最終的に表示する画像データ
-		button_input();
+		if(button_input()==0)return 0;
 		img = Overview(img);
 		img = people(10, img);
 		img = time_output(img);
@@ -53,6 +54,7 @@ int main() {
 		imshow("control",control);
 		if(waitKey(1)==113)break;
 	}
+EXIT:;
 }
 
 Mat Overview(Mat img) {
@@ -112,9 +114,11 @@ Mat time_output(Mat img) {//時間を出力
 Mat enter(Mat img) {//入室可不可を出力
 	if (out_flag == true) {//入室可能なら
 		img=PinP_tr(img,can,CAN_CANT_X,CAN_CANT_Y);
+		cvui::printf(control, 20, 150, 1.4,0x46ffff,"can enter");
 	}
 	else if (out_flag==false) {//入室不能なら
 		img=PinP_tr(img, cant, CAN_CANT_X,CAN_CANT_Y);
+		cvui::printf(control, 20, 150, 1.4,0xff0000,"cant enter");
 	}
 	return img;
 }
@@ -133,18 +137,23 @@ Mat PinP_tr(const cv::Mat& srcImg, const cv::Mat& smallImg, const int tx, const 
 	return dstImg;
 }
 
-void button_input() {
-	control = Mat(Size(240,120), CV_8UC3, Scalar(49, 52, 49));
-	if (cvui::button(control, 100, 20, "Increase")) {
-		ninn_num++;
-	}
-	if (cvui::button(control, 100, 70, "Reduce")) {
-		if (ninn_num != 0) {
-			ninn_num--;
-		}
-	}
+int button_input() {
+	control = Mat(Size(320,240), CV_8UC3, Scalar(49, 52, 49));
+	cvui::printf(control, 10, 220, "This program was made by masadaruma");
+	cvui::printf(control, 20, 10, "current count");
+	cvui::counter(control, 20, 30, &ninn_num);
+	cvui::printf(control, 20, 60, "Max count");
+	cvui::counter(control, 20, 80, &MAX_NINN);
+	if (cvui::button(control, 250, 190, "exit"))return 0;
+	if (cvui::button(control, 150, 30, "Reset current count"))ninn_num=0;
+	if (cvui::button(control, 150, 80, "Reset max count"))MAX_NINN=DEFAULT_MAX_NINN;
+	if (ninn_num < 0)ninn_num = 0;
+	if (MAX_NINN < 0)MAX_NINN = 0;
 	cout << "ninn_num : " << ninn_num << endl;
+	cout << "MAX_NINN" << MAX_NINN << endl;
 	cvui::update();
+	return 1;
 }
+
 
 
