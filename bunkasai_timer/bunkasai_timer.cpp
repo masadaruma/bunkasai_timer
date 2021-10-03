@@ -42,7 +42,7 @@ int main() {
 		img = time_output(img);
 		img = enter(img);
 		imshow("show", img);
-		if(waitKey(1００)==113)break;
+		if(waitKey(100)==113 )break;
 	}
 }
 
