@@ -1,6 +1,8 @@
 ﻿#include<iostream>
 #include<opencv2/opencv.hpp>
 #include<time.h>
+#define CVUI_IMPLEMENTATION
+#include "cvui.h"
 
 #ifdef _DEBUG
 #pragma comment(lib, "opencv_world453d.lib")
@@ -16,7 +18,7 @@ using namespace cv;
 //#define FRAME_HEIGHT 1080
 #define CAN_CANT_X 0		//入室可不可の座標
 #define CAN_CANT_Y 100
-#define MAX_NINN 25
+#define MAX_NINN 10
 
 Mat people(int people_val, Mat img);
 Mat ninzu;
@@ -24,25 +26,32 @@ Mat time_output(Mat img);
 Mat enter(Mat img);
 Mat PinP_tr(const cv::Mat& srcImg, const cv::Mat& smallImg, const int tx, const int ty);
 Mat Overview(Mat img);
+void button_input();
 bool out_flag = false, time_flag;
+int button_flag,ninn_num=0;//0が何も押されていない,1が増やす,2が減らす
 int old_sec;
 struct tm tm;
 Mat cant = imread("cant_enter.jpg"), can = imread("can_enter.jpg");
 Mat ninn = imread("ninn.jpg");
 Mat genzai = imread("ninzu.jpg");
+Mat control(Size(640, 480), CV_8UC3, Scalar(0, 0, 0));
 
 int main() {
 	int people_val;
 	ninzu=imread("ninzu.png");
 	namedWindow("show", WINDOW_AUTOSIZE|WINDOW_FREERATIO);
+	namedWindow("control", WINDOW_AUTOSIZE | WINDOW_FREERATIO);
+	cvui::init("control");
 	while (1) {
 		Mat img(Size(FRAME_WIDTH, FRAME_HEIGHT), CV_8UC3, Scalar(255, 255, 255));//最終的に表示する画像データ
+		button_input();
 		img = Overview(img);
 		img = people(10, img);
 		img = time_output(img);
 		img = enter(img);
 		imshow("show", img);
-		if(waitKey(100)==113 )break;
+		imshow("control",control);
+		if(waitKey(1)==113)break;
 	}
 }
 
@@ -53,7 +62,14 @@ Mat Overview(Mat img) {
 }
 
 Mat people(int people_val,Mat img) {//人数を出力
-	putText(img, to_string(people_val), Point(FRAME_WIDTH/4, FRAME_HEIGHT/1.5),FONT_HERSHEY_TRIPLEX,20, Scalar(0,0 , 255),50);
+	if (ninn_num < MAX_NINN) {
+		putText(img, to_string(ninn_num), Point(FRAME_WIDTH / 4, FRAME_HEIGHT / 1.5), FONT_HERSHEY_TRIPLEX, 20, Scalar(255, 0, 0), 50);
+		out_flag = true;
+	}
+	else if (ninn_num >= MAX_NINN) {
+		putText(img, to_string(ninn_num), Point(FRAME_WIDTH / 4, FRAME_HEIGHT / 1.5), FONT_HERSHEY_TRIPLEX, 20, Scalar(0, 0, 255), 50);
+		out_flag = false;
+	}
 	putText(img, "/"+to_string(MAX_NINN), Point(FRAME_WIDTH / 1.7, FRAME_HEIGHT / 1.3), FONT_HERSHEY_TRIPLEX, 10, Scalar(0, 0, 0), 30);
 	return img;
 }
@@ -78,8 +94,8 @@ Mat time_output(Mat img) {//時間を出力
 	cout << tm.tm_hour << ":" << tm.tm_min << ":"<<sec<<endl;
 	string hour= to_string(tm.tm_hour),min= to_string(tm.tm_min);
 
-	if (tm.tm_hour <= 10)hour.insert(0, "0");
-	if (tm.tm_min <= 10)min.insert(0, "0");
+	if (tm.tm_hour < 10)hour.insert(0, "0");
+	if (tm.tm_min < 10)min.insert(0, "0");
 	if (time_flag ==true) {
 		time_st = hour + ":" + min;
 		putText(img, time_st, Point(FRAME_WIDTH * 0.67, FRAME_HEIGHT * 0.125), FONT_HERSHEY_TRIPLEX, 6, Scalar(0, 0, 0), 8);
@@ -116,4 +132,19 @@ Mat PinP_tr(const cv::Mat& srcImg, const cv::Mat& smallImg, const int tx, const 
 	cv::warpAffine(smallImg, dstImg, mat, dstImg.size(), INTER_LINEAR, cv::BORDER_TRANSPARENT);
 	return dstImg;
 }
+
+void button_input() {
+	control = Mat(Size(240,120), CV_8UC3, Scalar(49, 52, 49));
+	if (cvui::button(control, 100, 20, "Increase")) {
+		ninn_num++;
+	}
+	if (cvui::button(control, 100, 70, "Reduce")) {
+		if (ninn_num != 0) {
+			ninn_num--;
+		}
+	}
+	cout << "ninn_num : " << ninn_num << endl;
+	cvui::update();
+}
+
 
